@@ -1,110 +1,63 @@
-![Spaghetti Kart](docs/spaghettigithublight.png#gh-light-mode-only)
-![Spaghetti Kart](docs/spaghettigithubnight.png#gh-dark-mode-only)
+# SpaghettiKart Handheld — Mario Kart 64 for Android handhelds (single screen)
 
-## Discord
+Fork of [izzy2lost/SpaghettiKart](https://github.com/izzy2lost/SpaghettiKart), the Android port of
+[SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart) (the Mario Kart 64 PC port), for Android handhelds
+with a built-in controller. Tested on the **AYN Odin 2 Portal** (1920×1080, Android 13).
 
-Official Discord: <https://discord.com/invite/shipofharkinian>
+What this fork changes (details in [CHANGELOG.md](CHANGELOG.md)):
 
-If you're having any trouble after reading through this `README`, feel free ask for help in the SpaghettiKart Support text channels. Please keep in mind that we do not condone piracy.
+- Own app ID `com.izzy.kart.handheld` ("SpaghettiKart Handheld") — installs next to the original app
+- No on-screen controller — play with the built-in controller; touch still works as a mouse in the menus. Only
+  the **Mods** button (to the mods and saves managers) is shown while the menu is open
+- Options menu: hold **Start + Select** for about one second to open or close it (once per press); **B** closes
+  it too. Start alone pauses the race as usual and does not reach the game while Select is held with it
+- Real full screen, no black strip from the navigation bar; the game renders at the full 1920×1080
+- Fixed: the APK was missing the files the launcher needs to turn the ROM into game data
 
-# Quick Start
+The race renders in 16:9 by default (wider view, not stretched); title and menu screens keep their 4:3 borders.
+For 4:3 in the race too, set *Settings → Graphics → Force aspect ratio* to *Original (4:3)*.
 
-SpaghettiKart does not include any copyrighted assets.  You are required to provide a supported copy of the game.
+> ⚠️ **No game assets.** The APK on the [Releases](../../releases) page contains only this project's code, like the
+> original releases. On the first start the app asks for your own ROM of **Mario Kart 64 (USA)**,
+> SHA-1 `579c48e211ae952530ffc8738709f078d5dd215e`, and turns it into the game data on the device.
 
-### 1. Verify your ROM dump
+Branch `handheld` is the fork's branch; `main` stays at izzy2lost's port. For playing, controls, mods and the
+desktop versions see the [original README](https://github.com/HarbourMasters/SpaghettiKart#readme).
 
-The US ROM is the only supported version. You can verify you have dumped a supported copy of the game by using the SHA-1 File Checksum Online at <https://www.romhacking.net/hash/>. The hash for a US ROM is SHA-1: 579C48E211AE952530FFC8738709F078D5DD215E.
+## Building
 
-### 2. Verify your ROM is in .z64 format
+Requires a Linux host (WSL works) with cmake, ninja, gcc/g++, JDK 17 and the Android SDK with
+`platforms;android-36`, `ndk;30.0.15729638` and `cmake;3.30.3`.
 
-Your ROM needs to be in .z64 format. If it's in .n64 format, use the following to convert it to a .z64: <https://hack64.net/tools/swapper.php>
+```bash
+git clone --recurse-submodules -b handheld https://github.com/almost-drowned-rat/SpaghettiKart-android-handheld-fix.git
+cd SpaghettiKart-android-handheld-fix
+# 1) Torch on the host, then the port's own assets (no ROM needed)
+cmake -S torch -B torch/build-host -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_STANDALONE=ON -DBUILD_MK64=ON \
+  -DBUILD_NAUDIO=ON -DBUILD_SM64=OFF -DBUILD_SF64=OFF -DBUILD_FZERO=OFF -DBUILD_MARIO_ARTIST=OFF
+cmake --build torch/build-host --parallel
+mkdir -p android/app/src/main/assets
+torch/build-host/torch pack assets android/app/src/main/assets/spaghetti.o2r o2r
+# 2) APK
+cd android && ./gradlew assembleDebug
+```
 
-### 2. Download SpaghettiKart from [Releases](https://github.com/HarbourMasters/SpaghettiKart/releases)
+Release signing reads `android/key.properties` (gitignored) or the environment, see `android/app/build.gradle.kts`.
 
-### 3. Generating the O2R from the ROM
+## Credits and license
 
-#### Windows
+- [izzy2lost/SpaghettiKart](https://github.com/izzy2lost/SpaghettiKart) — the Android port this fork is based on
+  (Kotlin app, on-device ROM extraction, mods and saves managers)
+- [HarbourMasters/SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart) — SpaghettiKart, the Mario Kart 64
+  port, and its contributors
+- [libultraship](https://github.com/Kenix3/libultraship) (MIT) and [Torch](https://github.com/HarbourMasters/Torch)
+  (MIT) by the Harbour Masters
+- [GreenNaugahyde/ZeldaWWHDRecompAndroid](https://github.com/GreenNaugahyde/ZeldaWWHDRecompAndroid) — full-screen
+  approach (`hideSystemBars`, MPL-2.0), via the Wind Waker and DK64 handheld forks
+- [SDL2](https://www.libsdl.org/), [Dear ImGui](https://github.com/ocornut/imgui) and the other libraries in the
+  submodules
 
-* Extract every file from the zip into a folder of your choosing.
-* Run "Spaghettify.exe" and select your US ROM.
+SpaghettiKart has no license file of its own (neither upstream nor in izzy2lost's port); this fork does not add
+one. libultraship and Torch are MIT-licensed. The changes of this fork are in this repository.
 
-#### Linux
-
-* Extract every file from the zip into a folder of your choosing.
-* Ensure `zenity` or `kdialog` package is installed.
-* Run "spaghetti.appimage" and select your US ROM. You may have to chmod +x the appimage via terminal.
-
-#### Nintendo Switch
-
-* Run one of the PC releases to generate an `mk64.o2r` file. After launching the game on PC, you will be able to find these files in the same directory as `Spaghettify.exe` or `spaghetti.appimage`.
-* Copy the files to your sd card
-
-#### Android
-
-* Install the APK and launch it, then pick your US ROM when prompted.
-* The app verifies the ROM and extracts `mk64.o2r` on the device — no PC step and no separate Torch app.
-* Everything the game uses lives in `Android/data/com.izzy.kart/files`, which any file manager can reach. Drop mods (`.o2r`, `.zip`, or plain folders) into the `mods` folder there; they load on the next launch.
-
-### 4. Play
-
-* Launch `Spaghettify.exe`
-Congratulations, you are now sailing with SpaghettiKart! Have fun!
-
-# Configuration
-
-### Default controls configuration
-
-| N64 | A | B | L | R | Z | Start | Analogue stick | C buttons | D-Pad |
-| - | - | - | - | - | - | - | - | - | - |
-| Keyboard | Shift | Ctrl | Q | Space | Z | Enter | Arrow keys | TGFH (↑ ↓ ← →) | Num 8 2 4 6 |
-| SDL Gamepad | A | X | LB | RB | LT | Start | L-Stick | R-Stick Up, B, Y, R-Stick Right (↑ ↓ ← →) | D-Pad |
-
-### Other shortcuts
-
-| Keys | Action |
-| - | - |
-| F11 | Fullscreen |
-| Tab | Toggle Alternate assets |
-| Ctrl+R | Reset |
-| Esc | Settings |
-
-### Graphics Backends
-
-Currently, there are three rendering APIs supported: DirectX11 (Windows), OpenGL (all platforms), and Metal (macOS). You can change which API to use in the `Settings` menu of the menubar, which requires a restart.  If you're having an issue with crashing, you can change the API in the `spaghettify.cfg.json` file by finding the line `"Backend":{`... and changing the `id` value to `3` and set the `Name` to `OpenGL`. `DirectX 11` with id `2` is the default on Windows. `Metal` with id `4` is the default on macOS.
-
-# Modding
-
-Custom assets are packed in `.o2r` or stored `.zip` files. To use custom assets, place them in the `mods` folder.
-
-There is an official [gamebanana page](https://gamebanana.com/games/22970).
-
-If you're interested in creating and/or packing your own custom asset `.o2r` files, check out the [documentation page](https://harbourmasters.github.io/SpaghettiKart/).
-
-**Note that .otr archives are not supported in SpaghettiKart!**
-
-# Development
-
-### Building
-
-If you want to manually compile SpaghettiKart, please consult the [building instructions](https://github.com/HarbourMasters/SpaghettiKart/blob/main/docs/BUILDING.md).
-
-### Playtesting (nightly)
-
-If you want to playtest a continuous integration build, you can find them at the links below. Keep in mind that these are for playtesting only, and you will likely encounter bugs and possibly crashes.
-
-* [Windows 64 bit]([https://nightly.link/HarbourMasters/SpaghettiKart/workflows/main/main/spaghetti-windows.zip?status=completed](https://nightly.link/HarbourMasters/SpaghettiKart/workflows/main/main/spaghetti-windows-x64.zip?status=completed))
-* [Windows 32 bit]([https://nightly.link/HarbourMasters/SpaghettiKart/workflows/main/main/spaghetti-windows.zip?status=completed](https://nightly.link/HarbourMasters/SpaghettiKart/workflows/main/main/spaghetti-windows-Win32.zip?status=completed))
-* [Linux 64 bit](https://nightly.link/HarbourMasters/SpaghettiKart/workflows/main/main/spaghetti-linux-x64.zip?status=completed)
-* [Linux 32 bit](https://nightly.link/HarbourMasters/SpaghettiKart/workflows/main/main/spaghetti-linux-x86.zip?status=completed)
-* [macOS-arm64](https://nightly.link/HarbourMasters/SpaghettiKart/workflows/main/main/spaghetti-mac-arm64.zip?status=completed)
-* [macOS-intel](https://nightly.link/HarbourMasters/SpaghettiKart/workflows/main/main/spaghetti-mac-intel-x64.zip?status=completed)
-* [Switch](https://nightly.link/HarbourMasters/SpaghettiKart/workflows/main/main/Spaghettify-switch.zip?status=completed)
-
-Maintainers: [MegaMech](https://www.github.com/MegaMech), [Coco](https://www.github.com/coco875), [Kirito](https://github.com/KiritoDv)
-
-<a href="https://github.com/Kenix3/libultraship/">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./docs/poweredbylus.darkmode.png">
-    <img alt="Powered by libultraship" src="./docs/poweredbylus.lightmode.png">
-  </picture>
-</a>
+*Fan project, not affiliated with Nintendo. Mario Kart 64 is © Nintendo.*
