@@ -3,6 +3,9 @@
 #include <ship/window/gui/Gui.h>
 #include <ship/window/Window.h>
 #include "ship/config/Config.h"
+#ifdef __ANDROID__
+#include "android/MenuCombo.h"
+#endif
 
 #ifdef __APPLE__
 #include <SDL_hints.h>
@@ -101,18 +104,29 @@ void SpaghettiGui::DrawMenu() {
 
     ImGui::DockSpace(dockId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_NoDockingInCentralNode);
 
-    if (ImGui::IsKeyPressed(TOGGLE_BTN) || ImGui::IsKeyPressed(ImGuiKey_Escape) ||
-        (ImGui::IsKeyPressed(TOGGLE_PAD_BTN) && CVarGetInteger(CVAR_IMGUI_CONTROLLER_NAV, 0))) {
-        if ((ImGui::IsKeyPressed(ImGuiKey_Escape) || ImGui::IsKeyPressed(TOGGLE_PAD_BTN)) && GetMenu()) {
+#ifdef __ANDROID__
+    // Handheld fork: holding Start + Select opens the menu; Select alone only closes it. While the menu is up
+    // the pad navigates it, also without the controller navigation setting (see MenuCombo.h).
+    const bool padToggle =
+        AndroidMenuCombo_Update(ImGui::IsKeyDown(ImGuiKey_GamepadStart), ImGui::IsKeyDown(TOGGLE_PAD_BTN),
+                                GetMenuOrMenubarVisible()) ||
+        (ImGui::IsKeyPressed(TOGGLE_PAD_BTN) && GetMenuOrMenubarVisible());
+    const bool padNav = true;
+#else
+    const bool padToggle = ImGui::IsKeyPressed(TOGGLE_PAD_BTN) && CVarGetInteger(CVAR_IMGUI_CONTROLLER_NAV, 0);
+    const bool padNav = CVarGetInteger(CVAR_IMGUI_CONTROLLER_NAV, 0);
+#endif
+    if (ImGui::IsKeyPressed(TOGGLE_BTN) || ImGui::IsKeyPressed(ImGuiKey_Escape) || padToggle) {
+        if ((ImGui::IsKeyPressed(ImGuiKey_Escape) || padToggle) && GetMenu()) {
             GetMenu()->ToggleVisibility();
-        } else if ((ImGui::IsKeyPressed(TOGGLE_BTN) || ImGui::IsKeyPressed(TOGGLE_PAD_BTN)) && GetMenuBar()) {
+        } else if ((ImGui::IsKeyPressed(TOGGLE_BTN) || padToggle) && GetMenuBar()) {
             Gui::GetMenuBar()->ToggleVisibility();
         }
         if (wnd->IsFullscreen()) {
             Context::GetRawInstance()->GetWindow()->SetMouseCapture(
                 !(GetMenuOrMenubarVisible() || wnd->ShouldForceCursorVisibility()));
         }
-        if (CVarGetInteger(CVAR_IMGUI_CONTROLLER_NAV, 0) && GetMenuOrMenubarVisible()) {
+        if (padNav && GetMenuOrMenubarVisible()) {
             mImGuiIo->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
         } else {
             mImGuiIo->ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;

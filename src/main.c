@@ -10,6 +10,9 @@
 
 #include "profiler.h"
 #include "main.h"
+#ifdef __ANDROID__
+#include "port/android/MenuCombo.h"
+#endif
 #include "racing/memory.h"
 #include "menus.h"
 #include <segments.h>
@@ -393,6 +396,10 @@ void read_controllers(void) {
     osContStartReadData(&gSIEventMesgQueue);
     // osRecvMesg(&gSIEventMesgQueue, &msg, OS_MESG_BLOCK);
     osContGetReadData(gControllerPads);
+#ifdef __ANDROID__
+    // Handheld fork: Start + Select opens the menu, so Start must not pause the race meanwhile.
+    AndroidMenuCombo_FilterButtons(&gControllerPads[0].button);
+#endif
     update_controller(0);
     update_controller(1);
     update_controller(2);
