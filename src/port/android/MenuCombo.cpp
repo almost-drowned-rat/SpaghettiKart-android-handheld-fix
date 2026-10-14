@@ -17,8 +17,9 @@ using Clock = std::chrono::steady_clock;
 // How long Start + Select must be held.
 constexpr auto kHoldTime = std::chrono::milliseconds(1000);
 // Start reaches the game only after this delay, so Select may follow it
-// without the game seeing a pause.
-constexpr auto kStartDelay = std::chrono::milliseconds(100);
+// without the game seeing a pause. Two buttons pressed "together" are often
+// 100-150 ms apart, so 100 ms was too short.
+constexpr auto kStartDelay = std::chrono::milliseconds(200);
 // A tap of Start shorter than kStartDelay is passed on for this long after the
 // release, so the game still sees it.
 constexpr auto kStartPulse = std::chrono::milliseconds(100);
@@ -43,20 +44,14 @@ bool gStartForwarded = false; // Start already reached the game during this pres
 
 } // namespace
 
-extern "C" bool AndroidMenuCombo_Update(bool start, bool back, bool menuVisible) {
+extern "C" bool AndroidMenuCombo_Update(bool start, bool back) {
     gBackHeld.store(back, std::memory_order_relaxed);
     const auto now = Clock::now();
 
+    // One toggle per press: after firing, nothing happens until both buttons
+    // are released, so neither holding on nor letting go toggles again.
     if (!start && !back) {
         gArmed = true;
-    }
-
-    // Never while the menu is open: otherwise the same combination that closes
-    // it with Select would open it again a second later.
-    if (menuVisible) {
-        gArmed = false;
-        gComboHeld = false;
-        return false;
     }
 
     if (!(start && back)) {
@@ -71,7 +66,8 @@ extern "C" bool AndroidMenuCombo_Update(bool start, bool back, bool menuVisible)
 
     if (gArmed && now - gComboSince >= kHoldTime) {
         gArmed = false;
-        __android_log_print(ANDROID_LOG_INFO, "SpaghettiKart", "menu combo: Start + Select held, opening the menu");
+        __android_log_print(ANDROID_LOG_INFO, "SpaghettiKart", "menu combo: Start + Select held for %lld ms",
+                            (long long)std::chrono::duration_cast<std::chrono::milliseconds>(now - gComboSince).count());
         return true;
     }
     return false;

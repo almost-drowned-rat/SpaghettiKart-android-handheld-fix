@@ -4,6 +4,7 @@
 #include <ship/window/Window.h>
 #include "ship/config/Config.h"
 #ifdef __ANDROID__
+#include <android/log.h>
 #include "android/MenuCombo.h"
 #endif
 
@@ -105,12 +106,19 @@ void SpaghettiGui::DrawMenu() {
     ImGui::DockSpace(dockId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_NoDockingInCentralNode);
 
 #ifdef __ANDROID__
-    // Handheld fork: holding Start + Select opens the menu; Select alone only closes it. While the menu is up
-    // the pad navigates it, also without the controller navigation setting (see MenuCombo.h).
-    const bool padToggle =
-        AndroidMenuCombo_Update(ImGui::IsKeyDown(ImGuiKey_GamepadStart), ImGui::IsKeyDown(TOGGLE_PAD_BTN),
-                                GetMenuOrMenubarVisible()) ||
-        (ImGui::IsKeyPressed(TOGGLE_PAD_BTN) && GetMenuOrMenubarVisible());
+    // Handheld fork: holding Start + Select toggles the menu, once per press (see MenuCombo.h); Select alone
+    // does nothing. B closes the menu when no popup or input field inside it is taking B. While the menu is up
+    // the pad navigates it, also without the controller navigation setting.
+    const bool comboToggle =
+        AndroidMenuCombo_Update(ImGui::IsKeyDown(ImGuiKey_GamepadStart), ImGui::IsKeyDown(TOGGLE_PAD_BTN));
+    const bool closeWithB = GetMenu() && GetMenu()->IsVisible() &&
+                            ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) && !ImGui::IsAnyItemActive() &&
+                            !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+    const bool padToggle = comboToggle || closeWithB;
+    if (padToggle) {
+        __android_log_print(ANDROID_LOG_INFO, "SpaghettiKart", "menu: %s by %s",
+                            GetMenuOrMenubarVisible() ? "closed" : "opened", comboToggle ? "Start + Select" : "B");
+    }
     const bool padNav = true;
 #else
     const bool padToggle = ImGui::IsKeyPressed(TOGGLE_PAD_BTN) && CVarGetInteger(CVAR_IMGUI_CONTROLLER_NAV, 0);
