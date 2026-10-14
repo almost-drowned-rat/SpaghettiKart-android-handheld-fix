@@ -37,7 +37,7 @@
     <!--
         No storage permissions: the ROM is read once through the document
         picker, and everything the game writes lives in the app's own external
-        files directory (Android/data/com.izzy.kart/files), which is also where
+        files directory (Android/data/com.izzy.kart.handheld/files), which is also where
         mods are dropped in.
     -->
 

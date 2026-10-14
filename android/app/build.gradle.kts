@@ -39,7 +39,7 @@ android {
     ndkVersion = "30.0.15729638"
 
     defaultConfig {
-        applicationId = "com.izzy.kart"
+        applicationId = "com.izzy.kart.handheld"
         minSdk = 24
         targetSdk = 36
         versionCode = 7

@@ -16,7 +16,7 @@ import java.security.MessageDigest
  * is also somewhere the user can reach with a file manager, which is what makes
  * dropping mods in possible, so everything lives there:
  *
- *     Android/data/com.izzy.kart/files/
+ *     Android/data/com.izzy.kart.handheld/files/
  *       baserom.us.z64      the user's ROM, copied in by the launcher
  *       config.yml, yamls/  Torch's extraction recipes, unpacked from the APK
  *       meta/mods.toml      packed into mk64.o2r as its mod manifest
