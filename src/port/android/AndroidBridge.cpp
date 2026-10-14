@@ -4,8 +4,11 @@
  * Two unrelated things live here because they are the only places the Java/Kotlin
  * side reaches into native code:
  *
- *  - the on-screen controller, which is fed into SDL as a virtual joystick, and
+ *  - whether the in-game menu is open (the Mods button follows it), and
  *  - game asset generation, which runs Torch against the user's ROM.
+ *
+ * Handheld fork: the on-screen controller and its virtual SDL joystick are gone;
+ * the built-in controller goes through libultraship's normal input mapping.
  *
  * The asset generation entry point is deliberately independent of libultraship:
  * it is called from the launcher activity, before SDL exists, so it cannot use
@@ -15,9 +18,6 @@
 
 #include <jni.h>
 #include <android/log.h>
-
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_gamecontroller.h>
 
 #include <cstdint>
 #include <exception>
@@ -48,71 +48,20 @@ std::string ToStdString(JNIEnv* env, jstring value) {
     return result;
 }
 
-// The on-screen controller is exposed to the game as an ordinary SDL game
-// controller so it flows through libultraship's normal input mapping.
-SDL_Joystick* gVirtualJoystick = nullptr;
-int gVirtualJoystickId = -1;
-
 } // namespace
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_izzy_kart_MainActivity_attachController(JNIEnv*, jobject) {
-    if (gVirtualJoystick != nullptr) {
-        return;
-    }
-
-    gVirtualJoystickId = SDL_JoystickAttachVirtual(SDL_JOYSTICK_TYPE_GAMECONTROLLER, 6, 18, 0);
-    if (gVirtualJoystickId == -1) {
-        __android_log_print(ANDROID_LOG_ERROR, kLogTag, "Could not attach the on-screen controller: %s",
-                            SDL_GetError());
-        return;
-    }
-
-    gVirtualJoystick = SDL_JoystickOpen(gVirtualJoystickId);
-    if (gVirtualJoystick == nullptr) {
-        __android_log_print(ANDROID_LOG_ERROR, kLogTag, "Could not open the on-screen controller: %s", SDL_GetError());
-        SDL_JoystickDetachVirtual(gVirtualJoystickId);
-        gVirtualJoystickId = -1;
-    }
-}
-
-JNIEXPORT void JNICALL Java_com_izzy_kart_MainActivity_detachController(JNIEnv*, jobject) {
-    if (gVirtualJoystick == nullptr) {
-        return;
-    }
-
-    SDL_JoystickClose(gVirtualJoystick);
-    SDL_JoystickDetachVirtual(gVirtualJoystickId);
-    gVirtualJoystick = nullptr;
-    gVirtualJoystickId = -1;
-}
-
-JNIEXPORT void JNICALL Java_com_izzy_kart_MainActivity_setButton(JNIEnv*, jobject, jint button, jboolean value) {
-    if (gVirtualJoystick == nullptr) {
-        return;
-    }
-
-    // Negative ids address an axis instead, so the triggers can be driven by a
-    // plain on/off button in the overlay.
-    if (button < 0) {
-        SDL_JoystickSetVirtualAxis(gVirtualJoystick, -button, value ? SDL_MAX_SINT16 : -SDL_MAX_SINT16);
-    } else {
-        SDL_JoystickSetVirtualButton(gVirtualJoystick, button, value);
-    }
-}
-
 /**
  * Whether libultraship's menu is currently up.
  *
- * The overlay needs this because the menu is not only opened by its own Menu
- * button — a keyboard, a gamepad, or the menu closing itself all change it
- * behind the overlay's back. Reading the engine's state instead of mirroring it
- * in Java is what keeps the two from drifting apart.
+ * The Mods button follows it: the menu is opened by the controller or a
+ * keyboard, and can close itself, so reading the engine's state is what keeps
+ * the button from drifting out of sync.
  *
  * Called from the UI thread while the game thread renders. It reads a bool the
  * game thread may be writing, which is worth accepting here: the value only
- * drives which overlay buttons are shown, and a torn read self-corrects on the
+ * drives whether the Mods button is shown, and a torn read self-corrects on the
  * next poll.
  */
 JNIEXPORT jboolean JNICALL Java_com_izzy_kart_MainActivity_isMenuOpen(JNIEnv*, jobject) {
@@ -132,14 +81,6 @@ JNIEXPORT jboolean JNICALL Java_com_izzy_kart_MainActivity_isMenuOpen(JNIEnv*, j
     }
 
     return gui->GetMenuOrMenubarVisible() ? JNI_TRUE : JNI_FALSE;
-}
-
-JNIEXPORT void JNICALL Java_com_izzy_kart_MainActivity_setAxis(JNIEnv*, jobject, jint axis, jshort value) {
-    if (gVirtualJoystick == nullptr) {
-        return;
-    }
-
-    SDL_JoystickSetVirtualAxis(gVirtualJoystick, axis, value);
 }
 
 /**

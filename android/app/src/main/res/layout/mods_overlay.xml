@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Handheld fork: no on-screen controller, only the button to the mods and saves
+     manager. It is shown while the in-game menu is open; MainActivity flips its
+     visibility. -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <Button
+        android:id="@+id/buttonMods"
+        android:layout_width="wrap_content"
+        android:layout_height="35dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="20dp"
+        android:minWidth="80dp"
+        android:background="@drawable/ic_rectangular_button"
+        android:text="@string/mods_button"
+        android:textColor="#CCFFFFFF"
+        android:textSize="12sp"
+        android:visibility="gone" />
+</FrameLayout>
