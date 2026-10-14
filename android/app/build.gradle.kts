@@ -27,11 +27,12 @@ val stageTorchAssets = tasks.register<Sync>("stageTorchAssets") {
     from(File(repositoryRoot, "meta")) { into("meta") }
 }
 
-// Derived from the task rather than named as a plain path, so every consumer
-// picks up the dependency. Naming the directory directly only looks fine until
-// something other than the asset merge reads it — release builds run lint-vital
-// over the source sets, and that failed on the missing dependency.
-val stagedTorchAssets: Provider<File> = stageTorchAssets.map { it.destinationDir }
+// preBuild, which every variant task depends on (the asset merge, and
+// lint-vital in release builds), runs the staging first. A provider mapped from
+// destinationDir carried no task dependency — Sync's destinationDir is not a
+// Gradle property — so the task never ran and the APK shipped without
+// config.yml, yamls/ and meta/.
+tasks.named("preBuild") { dependsOn(stageTorchAssets) }
 
 android {
     namespace = "com.izzy.kart"
@@ -107,7 +108,7 @@ android {
     }
 
     sourceSets.named("main") {
-        assets.srcDir(stagedTorchAssets)
+        assets.srcDir(layout.buildDirectory.dir("generated/torchAssets"))
     }
 
     compileOptions {
