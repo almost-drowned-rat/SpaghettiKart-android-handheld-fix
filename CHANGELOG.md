@@ -3,7 +3,7 @@
 Fork of [izzy2lost/SpaghettiKart](https://github.com/izzy2lost/SpaghettiKart) for Android handhelds with a built-in
 controller. Tested on the AYN Odin 2 Portal (1920×1080, Android 13).
 
-## 0.2 — unreleased
+## 0.2 — 2026-10-15
 
 ### Changed
 - Options menu on Android's **Back** instead of holding Start + Select: swipe from the edge to bring up the system
