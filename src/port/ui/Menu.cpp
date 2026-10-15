@@ -203,6 +203,18 @@ void ResetPage(SidebarEntry& page) {
     Ship::Context::GetRawInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
 }
 
+// A checkbox label wrapped to leave room for its reset button. The ImGui ID comes from the name alone ("###"), so
+// it stays the same when the wrapping changes with the column width (which would lose the controller selection).
+std::string CheckboxLabel(const WidgetInfo& widget, uint32_t width) {
+    if (HasDefault(widget)) {
+        const float room = ImGui::GetContentRegionAvail().x - UIWidgets::ResettableWidth() - ImGui::GetFrameHeight() -
+                           ImGui::GetStyle().ItemInnerSpacing.x * 2;
+        const uint32_t fit = static_cast<uint32_t>(std::max(8.0f, room / ImGui::CalcTextSize("W").x));
+        width = std::min(width, fit);
+    }
+    return UIWidgets::WrappedText(widget.name.c_str(), width) + "###" + widget.name;
+}
+
 } // namespace
 
 uint32_t GetVectorIndexOf(std::vector<std::string>& vector, std::string value) {
@@ -398,10 +410,8 @@ void Menu::MenuDrawItem(WidgetInfo& widget, uint32_t width, UIWidgets::Colors me
                 }
                 auto options = std::static_pointer_cast<UIWidgets::CheckboxOptions>(widget.options);
                 options->color = menuThemeIndex;
-                if (DrawResettable(widget, [&] {
-                        return UIWidgets::Checkbox(UIWidgets::WrappedText(widget.name.c_str(), width).c_str(),
-                                                   pointer, *options);
-                    })) {
+                const std::string label = CheckboxLabel(widget, width);
+                if (DrawResettable(widget, [&] { return UIWidgets::Checkbox(label.c_str(), pointer, *options); })) {
                     if (widget.callback != nullptr) {
                         widget.callback(widget);
                     }
@@ -410,8 +420,7 @@ void Menu::MenuDrawItem(WidgetInfo& widget, uint32_t width, UIWidgets::Colors me
             case WIDGET_CVAR_CHECKBOX: {
                 auto options = std::static_pointer_cast<UIWidgets::CheckboxOptions>(widget.options);
                 options->color = menuThemeIndex;
-                if (UIWidgets::CVarCheckbox(UIWidgets::WrappedText(widget.name.c_str(), width).c_str(), widget.cVar,
-                                            *options)) {
+                if (UIWidgets::CVarCheckbox(CheckboxLabel(widget, width).c_str(), widget.cVar, *options)) {
                     if (widget.callback != nullptr) {
                         widget.callback(widget);
                     }
@@ -972,12 +981,21 @@ void Menu::DrawElement() {
                                   ImGuiWindowFlags_NoTitleBar);
             }
             // On opening and after L / R / ZL / ZR the controller selection starts at the first entry.
-            if (i == 0 && navInitPending) {
+            // Waits while gamepad navigation is still off (the first frame of a menu that was open at start-up).
+            if (i == 0 && navInitPending && MenuPad::Active()) {
                 navInitPending = false;
-                if (MenuPad::Active()) {
-                    ImGui::FocusWindow(ImGui::GetCurrentWindow());
-                    ImGui::NavInitWindow(ImGui::GetCurrentWindow(), true);
+                navShowFrames = 30;
+                ImGui::FocusWindow(ImGui::GetCurrentWindow());
+                ImGui::NavInitWindow(ImGui::GetCurrentWindow(), true);
+            }
+            // ImGui hides the selection on mouse movement, and SDL reports the first mouse position only a few
+            // frames after start-up; so keep it shown for a moment unless the screen is being touched.
+            if (i == 0 && navShowFrames > 0) {
+                navShowFrames--;
+                if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
                     ImGui::SetNavCursorVisible(true);
+                } else {
+                    navShowFrames = 0;
                 }
             }
             // for (auto& entryName : sidebar->at(sectionIndex).sidebarOrder) {

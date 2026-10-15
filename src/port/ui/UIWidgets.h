@@ -338,6 +338,7 @@ namespace UIWidgets {
     void BeginResettable();
     bool EndResettable(const char* label, bool differs, bool disabled);
     bool FloatDiffers(float value, float defaultValue);
+    float ResettableWidth(); // room BeginResettable() keeps at the right edge
 
     void PushStyleMenu(const ImVec4& color);
     void PushStyleMenu(Colors color = Colors::LightBlue);
@@ -431,9 +432,9 @@ namespace UIWidgets {
         PopStyleCombobox();
         ImGui::EndDisabled();
         ImGui::EndGroup();
-        if (options.disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && !Ship_IsCStringEmpty(options.disabledTooltip)) {
+        if (options.disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip) && !Ship_IsCStringEmpty(options.disabledTooltip)) {
             ImGui::SetTooltip("%s", WrappedText(options.disabledTooltip).c_str());
-        } else if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && !Ship_IsCStringEmpty(options.tooltip)) {
+        } else if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip) && !Ship_IsCStringEmpty(options.tooltip)) {
             ImGui::SetTooltip("%s", WrappedText(options.tooltip).c_str());
         }
         ImGui::PopID();
@@ -516,9 +517,9 @@ namespace UIWidgets {
         PopStyleCombobox();
         ImGui::EndDisabled();
         ImGui::EndGroup();
-        if (options.disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && !Ship_IsCStringEmpty(options.disabledTooltip)) {
+        if (options.disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip) && !Ship_IsCStringEmpty(options.disabledTooltip)) {
             ImGui::SetTooltip("%s", WrappedText(options.disabledTooltip).c_str());
-        } else if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && !Ship_IsCStringEmpty(options.tooltip)) {
+        } else if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip) && !Ship_IsCStringEmpty(options.tooltip)) {
             ImGui::SetTooltip("%s", WrappedText(options.tooltip).c_str());
         }
         ImGui::PopID();
@@ -591,9 +592,9 @@ namespace UIWidgets {
         PopStyleCombobox();
         ImGui::EndDisabled();
         ImGui::EndGroup();
-        if (options.disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && !Ship_IsCStringEmpty(options.disabledTooltip)) {
+        if (options.disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip) && !Ship_IsCStringEmpty(options.disabledTooltip)) {
             ImGui::SetTooltip("%s", WrappedText(options.disabledTooltip).c_str());
-        } else if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && !Ship_IsCStringEmpty(options.tooltip)) {
+        } else if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip) && !Ship_IsCStringEmpty(options.tooltip)) {
             ImGui::SetTooltip("%s", WrappedText(options.tooltip).c_str());
         }
         ImGui::PopID();
@@ -669,9 +670,9 @@ namespace UIWidgets {
         PopStyleCombobox();
         ImGui::EndDisabled();
         ImGui::EndGroup();
-        if (options.disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && !Ship_IsCStringEmpty(options.disabledTooltip)) {
+        if (options.disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip) && !Ship_IsCStringEmpty(options.disabledTooltip)) {
             ImGui::SetTooltip("%s", WrappedText(options.disabledTooltip).c_str());
-        } else if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled) && !Ship_IsCStringEmpty(options.tooltip)) {
+        } else if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip) && !Ship_IsCStringEmpty(options.tooltip)) {
             ImGui::SetTooltip("%s", WrappedText(options.tooltip).c_str());
         }
         ImGui::PopID();
