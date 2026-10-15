@@ -124,7 +124,7 @@ void PortMenu::AddSettings() {
                      .ComboMap(menuExtentOptions)
                      .DefaultIndex(MenuExtent::Condensed));
 
-    AddWidget(path, "Menu Scale: %.0fx", WIDGET_CVAR_SLIDER_FLOAT)
+    AddWidget(path, "Menu Scale: %.1fx", WIDGET_CVAR_SLIDER_FLOAT)
         .CVar("gSettings.Menu.Scale")
         .PreFunc([](WidgetInfo& info) { info.isHidden = !CVarGetInteger("gSettings.Menu.Extent", 0); })
         .Options(FloatSliderOptions()
@@ -190,30 +190,26 @@ void PortMenu::AddSettings() {
         .CVar("gGameMasterVolume")
         .Options(FloatSliderOptions()
                      .Tooltip("Adjust the overall sound volume.")
-                     .ShowButtons(false)
-                     .Format("")
-                     .IsPercentage());
+                     .IsPercentage()
+                     .Format("%.0f%%"));
     AddWidget(path, "Main Music Volume: %.0f%%", WIDGET_CVAR_SLIDER_FLOAT)
         .CVar("gMainMusicVolume")
         .Options(FloatSliderOptions()
                      .Tooltip("Adjust the background music volume.")
-                     .ShowButtons(false)
-                     .Format("")
-                     .IsPercentage());
+                     .IsPercentage()
+                     .Format("%.0f%%"));
     AddWidget(path, "Sound Effects Volume: %.0f%%", WIDGET_CVAR_SLIDER_FLOAT)
         .CVar("gSFXMusicVolume")
         .Options(FloatSliderOptions()
                      .Tooltip("Adjust the sound effects volume.")
-                     .ShowButtons(false)
-                     .Format("")
-                     .IsPercentage());
+                     .IsPercentage()
+                     .Format("%.0f%%"));
     AddWidget(path, "Environment Volume: %.0f%%", WIDGET_CVAR_SLIDER_FLOAT)
         .CVar("gEnvironmentVolume")
         .Options(FloatSliderOptions()
                      .Tooltip("Adjust the environment volume.")
-                     .ShowButtons(false)
-                     .Format("")
-                     .IsPercentage());
+                     .IsPercentage()
+                     .Format("%.0f%%"));
     AddWidget(path, "Audio API", WIDGET_AUDIO_BACKEND);
 
     // Graphics Settings
@@ -252,11 +248,12 @@ void PortMenu::AddSettings() {
             FloatSliderOptions()
                 .Tooltip("Multiplies your output resolution by the value inputted, as a more intensive but effective "
                          "form of anti-aliasing.")
-                .ShowButtons(false)
                 .IsPercentage()
-                .Format("")
+                .Format("%.0f%%")
                 .Min(0.5f)
-                .Max(4.0f));
+                .Max(4.0f)
+                .Step(0.01f) // 1 %
+                .DefaultValue(1.0f));
 
 #ifndef __WIIU__
     AddWidget(path, "Anti-aliasing (MSAA): %d", WIDGET_CVAR_SLIDER_INT)
@@ -391,12 +388,13 @@ void PortMenu::AddEnhancements() {
                      .Max(10000.0f)
                      .DefaultValue(10000.0f)
                      .Tooltip("Say how Far the Frustrum are when 'Disable Culling' are enable")
-                     .Step(10.0f));
+                     .Step(10.0f)
+                     .Format("%.0f"));
     AddWidget(path, "Enable Custom CC", WIDGET_CVAR_CHECKBOX).CVar("gEnableCustomCC");
     AddWidget(path, "Custom CC", WIDGET_CVAR_SLIDER_FLOAT)
         .CVar("gCustomCC")
         .PreFunc([](WidgetInfo& info) { info.isHidden = !CVarGetInteger("gEnableCustomCC", 0); })
-        .Options(FloatSliderOptions().Min(0.0f).Max(1000.0f).DefaultValue(150.0f).Step(10.0f));
+        .Options(FloatSliderOptions().Min(0.0f).Max(1000.0f).DefaultValue(150.0f).Step(10.0f).Format("%.0f"));
 
     AddWidget(path, "Enable Digital Speedometer", WIDGET_CVAR_CHECKBOX)
         .CVar("gEnableDigitalSpeedometer")
@@ -426,8 +424,13 @@ void PortMenu::AddEnhancements() {
     AddWidget(path, "Min Height", WIDGET_CVAR_SLIDER_FLOAT)
         .CVar("gMinHeight")
         .PreFunc([](WidgetInfo& info) { info.isHidden = !CVarGetInteger("gNoWallColision", 0); })
-        .Options(FloatSliderOptions().Min(-50.0f).Max(50.0f).DefaultValue(0.0f).Tooltip(
-            "When Disable Wall Collision are enable what is the minimal height you can get."));
+        .Options(FloatSliderOptions()
+                     .Min(-50.0f)
+                     .Max(50.0f)
+                     .DefaultValue(0.0f)
+                     .Step(1.0f)
+                     .Format("%.0f")
+                     .Tooltip("When Disable Wall Collision are enable what is the minimal height you can get."));
 }
 
 #ifdef __SWITCH__
@@ -478,13 +481,13 @@ void PortMenu::AddRulesets() {
         .Options(CheckboxOptions().Tooltip("Fixes a logic bug in the game code. No evidence if this is intended gameplay or not."));
     AddWidget(path, "Track X Stretch", WIDGET_SLIDER_FLOAT)
         .ValuePointer(&gVtxStretch[0])
-        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.2f").DefaultValue(1.0f));
+        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.1f").DefaultValue(1.0f));
     AddWidget(path, "Track Y Stretch", WIDGET_SLIDER_FLOAT)
         .ValuePointer(&gVtxStretch[1])
-        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.2f").DefaultValue(1.0f));
+        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.1f").DefaultValue(1.0f));
     AddWidget(path, "Track Z Stretch", WIDGET_SLIDER_FLOAT)
         .ValuePointer(&gVtxStretch[2])
-        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.2f").DefaultValue(1.0f));
+        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.1f").DefaultValue(1.0f));
 
 
     AddWidget(path, "Trains", WIDGET_CVAR_SLIDER_INT)

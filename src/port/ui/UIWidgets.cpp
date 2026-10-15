@@ -539,6 +539,10 @@ void ClampFloat(float* value, float min, float max, float step) {
     } else if (*value > max) {
         *value = max;
     } else {
+        // Whole steps from min (e.g. whole percent), so a finger or the D-pad cannot land between them.
+        if (step > 0.0f) {
+            *value = std::min(max, min + std::round((*value - min) / step) * step);
+        }
         int trunc = (int)std::round(*value * factor);
         *value = (float)trunc / factor;
     }
@@ -546,6 +550,15 @@ void ClampFloat(float* value, float min, float max, float step) {
 
 bool SliderFloat(const char* label, float* value, const FloatSliderOptions& options) {
     bool dirty = false;
+    // A value from the config file or an older version may sit between steps (e.g. 99.6 %): snap it once.
+    if (!options.disabled) {
+        float snapped = *value;
+        ClampFloat(&snapped, options.min, options.max, options.step);
+        if (std::fabs(snapped - *value) > options.step * 0.001f) {
+            *value = snapped;
+            dirty = true;
+        }
+    }
     std::string invisibleLabelStr = "##" + std::string(label);
     const char* invisibleLabel = invisibleLabelStr.c_str();
     float valueToDisplay = options.isPercentage ? *value * 100.0f : *value;
