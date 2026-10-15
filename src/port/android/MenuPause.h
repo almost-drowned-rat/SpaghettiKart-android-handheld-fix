@@ -1,14 +1,14 @@
 /**
  * Handheld fork: the game stands still while the menu is open.
  *
- * Whichever way the menu was opened (Start + Select, touch, keyboard), the game
+ * Whichever way the menu was opened (Back, touch, keyboard), the game
  * logic, its timers and the sound stop for as long as it is up; the last frame
  * stays on screen behind it. Closing it resumes exactly where it stopped.
  *
  *  - AndroidMenuPause_Update(): once per frame from push_frame (Game.cpp).
  *    Returns true while the game should stand still.
  *  - AndroidMenuPause_FilterPad(): from read_controllers (src/main.c). Buttons
- *    and the stick that are still held when the menu closes (B, Start, A, a
+ *    and the stick that are still held when the menu closes (B, A, a
  *    direction) do not reach the game until they are released, so closing the
  *    menu does not pause the race or pick a menu entry.
  */

@@ -5,7 +5,6 @@
 #include "ship/config/Config.h"
 #ifdef __ANDROID__
 #include <android/log.h>
-#include "android/MenuCombo.h"
 #endif
 
 #ifdef __APPLE__
@@ -106,11 +105,11 @@ void SpaghettiGui::DrawMenu() {
     ImGui::DockSpace(dockId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None | ImGuiDockNodeFlags_NoDockingInCentralNode);
 
 #ifdef __ANDROID__
-    // Handheld fork: holding Start + Select toggles the menu, once per press (see MenuCombo.h); Select alone
-    // does nothing. B closes the menu when no popup or input field inside it is taking B. While the menu is up
-    // the pad navigates it, also without the controller navigation setting.
-    const bool comboToggle =
-        AndroidMenuCombo_Update(ImGui::IsKeyDown(ImGuiKey_GamepadStart), ImGui::IsKeyDown(TOGGLE_PAD_BTN));
+    // Handheld fork: Android's Back (the back button of the system bar a swipe from the edge brings up, or the
+    // back gesture) toggles the menu; the game uses Back for nothing else. SDL passes it on as AC_BACK, which
+    // ImGui's SDL backend maps to AppBack. Select does nothing. B closes the menu when no popup or input field
+    // inside it is taking B. While the menu is up the pad navigates it.
+    const bool backToggle = ImGui::IsKeyPressed(ImGuiKey_AppBack, false);
     // ImGui has already handled this frame's B (closing a popup, leaving a slider) before this runs, so whether
     // B was taken is judged by the state at the end of the previous frame.
     static bool menuWasBusy = false;
@@ -118,10 +117,10 @@ void SpaghettiGui::DrawMenu() {
                             ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) && !menuWasBusy &&
                             !ImGui::IsAnyItemActive() &&
                             !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
-    const bool padToggle = comboToggle || closeWithB;
+    const bool padToggle = backToggle || closeWithB;
     if (padToggle) {
         __android_log_print(ANDROID_LOG_INFO, "SpaghettiKart", "menu: %s by %s",
-                            GetMenuOrMenubarVisible() ? "closed" : "opened", comboToggle ? "Start + Select" : "B");
+                            GetMenuOrMenubarVisible() ? "closed" : "opened", backToggle ? "Back" : "B");
     }
     const bool padNav = true;
 #else

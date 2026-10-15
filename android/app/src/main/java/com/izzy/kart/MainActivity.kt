@@ -129,9 +129,9 @@ class MainActivity : SDLActivity() {
     /**
      * Shows the Mods button while the engine's menu is open.
      *
-     * The menu is opened and closed by the controller (Start + Select), a
-     * keyboard, or the menu dismissing itself, so the engine is asked rather
-     * than tracking it here.
+     * The menu is opened and closed by Android's Back (system bar or gesture),
+     * B, a keyboard, or the menu dismissing itself, so the engine is asked
+     * rather than tracking it here.
      */
     private fun syncMenuState() {
         val open = runCatching { isMenuOpen() }.getOrDefault(false)
