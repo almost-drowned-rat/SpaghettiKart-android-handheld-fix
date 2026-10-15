@@ -50,6 +50,77 @@ void Tooltip(const char* text) {
     }
 }
 
+namespace {
+
+struct Resettable {
+    ImGuiWindow* window;
+    float reserved;
+    bool navAliveBefore;
+};
+std::vector<Resettable> sResettables;
+
+float ResetButtonSize() {
+    // As tall as the menu's slider and button rows (font + 2 x 8 px padding), easy to hit by touch.
+    return ImGui::GetFontSize() + 16.0f;
+}
+
+} // namespace
+
+bool FloatDiffers(float value, float defaultValue) {
+    return std::fabs(value - defaultValue) > 1e-5f;
+}
+
+void BeginResettable() {
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    const float reserved = ResetButtonSize() + g.Style.ItemSpacing.x;
+    window->WorkRect.Max.x -= reserved;
+    window->ContentRegionRect.Max.x -= reserved;
+    sResettables.push_back({ window, reserved, g.NavIdIsAlive });
+}
+
+bool EndResettable(const char* label, bool differs, bool disabled) {
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(!sResettables.empty());
+    const Resettable state = sResettables.back();
+    sResettables.pop_back();
+    ImGuiWindow* window = state.window;
+    window->WorkRect.Max.x += state.reserved;
+    window->ContentRegionRect.Max.x += state.reserved;
+    // The controller selection is on this setting if its item was submitted since BeginResettable().
+    const bool selected = !state.navAliveBefore && g.NavIdIsAlive;
+    if (window->SkipItems) {
+        return false;
+    }
+
+    // Right edge, on the setting's last row (the slider or box below a label).
+    const float size = ResetButtonSize();
+    const ImVec2 settingMax = ImGui::GetItemRectMax();
+    ImGui::SameLine(0.0f, 0.0f);
+    ImGui::SetCursorScreenPos({ window->ContentRegionRect.Max.x - size, settingMax.y - size });
+
+    ImGui::PushID(label);
+    ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true); // reached with Y, so D-pad navigation skips it
+    ImGui::BeginDisabled(!differs || disabled);
+    PushStyleButton(Colors::Gray);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
+    bool pressed = ImGui::Button(ICON_FA_UNDO "##ResetToDefault", ImVec2(size, size));
+    ImGui::PopStyleVar(2);
+    PopStyleButton();
+    ImGui::EndDisabled();
+    ImGui::PopItemFlag();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("%s", differs ? "Reset to default" : "Default");
+    }
+    ImGui::PopID();
+
+    if (selected && differs && !disabled && MenuPad::Pressed(ImGuiKey_GamepadFaceUp)) {
+        pressed = true;
+    }
+    return pressed;
+}
+
 void PushStyleMenu(const ImVec4& color) {
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(color.x, color.y, color.z, 0.5f));
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(color.x, color.y, color.z, 1.0f));
@@ -291,10 +362,17 @@ bool Checkbox(const char* _label, bool* value, const CheckboxOptions& options) {
 bool CVarCheckbox(const char* label, const char* cvarName, const CheckboxOptions& options) {
     bool dirty = false;
     bool value = (bool)CVarGetInteger(cvarName, options.defaultValue);
+    BeginResettable();
     if (Checkbox(label, &value, options)) {
+        dirty = true;
+    }
+    if (EndResettable(label, value != options.defaultValue, options.disabled)) {
+        value = options.defaultValue;
+        dirty = true;
+    }
+    if (dirty) {
         CVarSetInteger(cvarName, value);
         Ship::Context::GetRawInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
-        dirty = true;
     }
     return dirty;
 }
@@ -413,10 +491,17 @@ bool SliderInt(const char* label, int32_t* value, const IntSliderOptions& option
 bool CVarSliderInt(const char* label, const char* cvarName, const IntSliderOptions& options) {
     bool dirty = false;
     int32_t value = CVarGetInteger(cvarName, options.defaultValue);
+    BeginResettable();
     if (SliderInt(label, &value, options)) {
+        dirty = true;
+    }
+    if (EndResettable(label, value != options.defaultValue, options.disabled)) {
+        value = options.defaultValue;
+        dirty = true;
+    }
+    if (dirty) {
         CVarSetInteger(cvarName, value);
         Ship::Context::GetRawInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
-        dirty = true;
     }
     return dirty;
 }
@@ -533,10 +618,17 @@ bool SliderFloat(const char* label, float* value, const FloatSliderOptions& opti
 bool CVarSliderFloat(const char* label, const char* cvarName, const FloatSliderOptions& options) {
     bool dirty = false;
     float value = CVarGetFloat(cvarName, options.defaultValue);
+    BeginResettable();
     if (SliderFloat(label, &value, options)) {
+        dirty = true;
+    }
+    if (EndResettable(label, FloatDiffers(value, options.defaultValue), options.disabled)) {
+        value = options.defaultValue;
+        dirty = true;
+    }
+    if (dirty) {
         CVarSetFloat(cvarName, value);
         Ship::Context::GetRawInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
-        dirty = true;
     }
     return dirty;
 }

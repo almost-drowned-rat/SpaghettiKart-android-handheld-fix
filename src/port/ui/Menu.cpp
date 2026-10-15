@@ -63,6 +63,148 @@ bool operator>(Color_RGBA8 const& l, Color_RGBA8 const& r) noexcept {
            (l.r >= r.r && l.g >= r.g && l.b >= r.b && l.a > r.a);
 }
 
+namespace {
+
+// Defaults of the settings widgets, for the reset buttons. CVar widgets always have one (the value used when the CVar
+// is unset); widgets on a plain pointer only when it was given with DefaultValue / DefaultIndex.
+bool HasDefault(const WidgetInfo& widget) {
+    switch (widget.type) {
+        case WIDGET_CVAR_CHECKBOX:
+        case WIDGET_CVAR_COMBOBOX:
+        case WIDGET_CVAR_SLIDER_INT:
+        case WIDGET_CVAR_SLIDER_FLOAT:
+            return widget.cVar != nullptr;
+        case WIDGET_CHECKBOX:
+        case WIDGET_COMBOBOX:
+        case WIDGET_SLIDER_INT:
+        case WIDGET_SLIDER_FLOAT:
+            return widget.options->hasDefault;
+        default:
+            return false;
+    }
+}
+
+bool DiffersFromDefault(const WidgetInfo& widget) {
+    if (!HasDefault(widget)) {
+        return false;
+    }
+    switch (widget.type) {
+        case WIDGET_CVAR_CHECKBOX: {
+            const bool def = std::static_pointer_cast<UIWidgets::CheckboxOptions>(widget.options)->defaultValue;
+            return (bool)CVarGetInteger(widget.cVar, def) != def;
+        }
+        case WIDGET_CVAR_COMBOBOX: {
+            const int32_t def = std::static_pointer_cast<UIWidgets::ComboboxOptions>(widget.options)->defaultIndex;
+            return CVarGetInteger(widget.cVar, def) != def;
+        }
+        case WIDGET_CVAR_SLIDER_INT: {
+            const int32_t def = std::static_pointer_cast<UIWidgets::IntSliderOptions>(widget.options)->defaultValue;
+            return CVarGetInteger(widget.cVar, def) != def;
+        }
+        case WIDGET_CVAR_SLIDER_FLOAT: {
+            const float def = std::static_pointer_cast<UIWidgets::FloatSliderOptions>(widget.options)->defaultValue;
+            return UIWidgets::FloatDiffers(CVarGetFloat(widget.cVar, def), def);
+        }
+        case WIDGET_CHECKBOX:
+            return *std::get<bool*>(widget.valuePointer) !=
+                   std::static_pointer_cast<UIWidgets::CheckboxOptions>(widget.options)->defaultValue;
+        case WIDGET_COMBOBOX:
+            return *std::get<int32_t*>(widget.valuePointer) !=
+                   (int32_t)std::static_pointer_cast<UIWidgets::ComboboxOptions>(widget.options)->defaultIndex;
+        case WIDGET_SLIDER_INT:
+            return *std::get<int32_t*>(widget.valuePointer) !=
+                   std::static_pointer_cast<UIWidgets::IntSliderOptions>(widget.options)->defaultValue;
+        case WIDGET_SLIDER_FLOAT:
+            return UIWidgets::FloatDiffers(
+                *std::get<float*>(widget.valuePointer),
+                std::static_pointer_cast<UIWidgets::FloatSliderOptions>(widget.options)->defaultValue);
+        default:
+            return false;
+    }
+}
+
+// Sets the value only; the caller runs the widget's callback.
+void SetToDefault(WidgetInfo& widget) {
+    switch (widget.type) {
+        case WIDGET_CVAR_CHECKBOX:
+            CVarSetInteger(widget.cVar,
+                           std::static_pointer_cast<UIWidgets::CheckboxOptions>(widget.options)->defaultValue);
+            break;
+        case WIDGET_CVAR_COMBOBOX:
+            CVarSetInteger(widget.cVar,
+                           std::static_pointer_cast<UIWidgets::ComboboxOptions>(widget.options)->defaultIndex);
+            break;
+        case WIDGET_CVAR_SLIDER_INT:
+            CVarSetInteger(widget.cVar,
+                           std::static_pointer_cast<UIWidgets::IntSliderOptions>(widget.options)->defaultValue);
+            break;
+        case WIDGET_CVAR_SLIDER_FLOAT:
+            CVarSetFloat(widget.cVar,
+                         std::static_pointer_cast<UIWidgets::FloatSliderOptions>(widget.options)->defaultValue);
+            break;
+        case WIDGET_CHECKBOX:
+            *std::get<bool*>(widget.valuePointer) =
+                std::static_pointer_cast<UIWidgets::CheckboxOptions>(widget.options)->defaultValue;
+            break;
+        case WIDGET_COMBOBOX:
+            *std::get<int32_t*>(widget.valuePointer) =
+                std::static_pointer_cast<UIWidgets::ComboboxOptions>(widget.options)->defaultIndex;
+            break;
+        case WIDGET_SLIDER_INT:
+            *std::get<int32_t*>(widget.valuePointer) =
+                std::static_pointer_cast<UIWidgets::IntSliderOptions>(widget.options)->defaultValue;
+            break;
+        case WIDGET_SLIDER_FLOAT:
+            *std::get<float*>(widget.valuePointer) =
+                std::static_pointer_cast<UIWidgets::FloatSliderOptions>(widget.options)->defaultValue;
+            break;
+        default:
+            break;
+    }
+}
+
+// Reset button for a widget on a plain pointer (the CVar widgets draw their own).
+template <typename DrawFunc> bool DrawResettable(WidgetInfo& widget, DrawFunc draw) {
+    if (!HasDefault(widget)) {
+        return draw();
+    }
+    UIWidgets::BeginResettable();
+    bool changed = draw();
+    if (UIWidgets::EndResettable(widget.name.c_str(), DiffersFromDefault(widget), widget.options->disabled)) {
+        SetToDefault(widget);
+        changed = true;
+    }
+    return changed;
+}
+
+// Every setting on a sidebar page that is shown, enabled and not at its default goes back to it.
+bool PageHasChanges(const SidebarEntry& page) {
+    for (const auto& column : page.columnWidgets) {
+        for (const auto& widget : column) {
+            if (DiffersFromDefault(widget) && !widget.isHidden && !widget.options->disabled) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void ResetPage(SidebarEntry& page) {
+    for (auto& column : page.columnWidgets) {
+        for (auto& widget : column) {
+            if (DiffersFromDefault(widget) && !widget.isHidden && !widget.options->disabled) {
+                SetToDefault(widget);
+                if (widget.callback != nullptr) {
+                    widget.callback(widget);
+                }
+            }
+        }
+    }
+    Ship::Context::GetRawInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
+}
+
+} // namespace
+
 uint32_t GetVectorIndexOf(std::vector<std::string>& vector, std::string value) {
     return std::distance(vector.begin(), std::find(vector.begin(), vector.end(), value));
 }
@@ -256,8 +398,10 @@ void Menu::MenuDrawItem(WidgetInfo& widget, uint32_t width, UIWidgets::Colors me
                 }
                 auto options = std::static_pointer_cast<UIWidgets::CheckboxOptions>(widget.options);
                 options->color = menuThemeIndex;
-                if (UIWidgets::Checkbox(UIWidgets::WrappedText(widget.name.c_str(), width).c_str(), pointer,
-                                        *options)) {
+                if (DrawResettable(widget, [&] {
+                        return UIWidgets::Checkbox(UIWidgets::WrappedText(widget.name.c_str(), width).c_str(),
+                                                   pointer, *options);
+                    })) {
                     if (widget.callback != nullptr) {
                         widget.callback(widget);
                     }
@@ -331,7 +475,9 @@ void Menu::MenuDrawItem(WidgetInfo& widget, uint32_t width, UIWidgets::Colors me
                 }
                 auto options = std::static_pointer_cast<UIWidgets::ComboboxOptions>(widget.options);
                 options->color = menuThemeIndex;
-                if (UIWidgets::Combobox(widget.name.c_str(), pointer, options->comboMap, *options)) {
+                if (DrawResettable(widget, [&] {
+                        return UIWidgets::Combobox(widget.name.c_str(), pointer, options->comboMap, *options);
+                    })) {
                     if (widget.callback != nullptr) {
                         widget.callback(widget);
                     }
@@ -355,7 +501,8 @@ void Menu::MenuDrawItem(WidgetInfo& widget, uint32_t width, UIWidgets::Colors me
                 }
                 auto options = std::static_pointer_cast<UIWidgets::IntSliderOptions>(widget.options);
                 options->color = menuThemeIndex;
-                if (UIWidgets::SliderInt(widget.name.c_str(), pointer, *options)) {
+                if (DrawResettable(widget,
+                                   [&] { return UIWidgets::SliderInt(widget.name.c_str(), pointer, *options); })) {
                     if (widget.callback != nullptr) {
                         widget.callback(widget);
                     }
@@ -380,7 +527,8 @@ void Menu::MenuDrawItem(WidgetInfo& widget, uint32_t width, UIWidgets::Colors me
                 }
                 auto options = std::static_pointer_cast<UIWidgets::FloatSliderOptions>(widget.options);
                 options->color = menuThemeIndex;
-                if (UIWidgets::SliderFloat(widget.name.c_str(), pointer, *options)) {
+                if (DrawResettable(widget,
+                                   [&] { return UIWidgets::SliderFloat(widget.name.c_str(), pointer, *options); })) {
                     if (widget.callback != nullptr) {
                         widget.callback(widget);
                     }
@@ -711,9 +859,9 @@ void Menu::DrawElement() {
     window->DrawList->AddRectFilled(pos, pos + ImVec2{ menuSize.x, 4 }, ImGui::GetColorU32({ 255, 255, 255, 255 }),
                                     true, style.WindowRounding);
     pos.y += style.ItemSpacing.y;
-    // A line at the bottom with the controller buttons.
+    // A line at the bottom: the controller buttons and "Reset page".
     const bool padHelp = MenuPad::Active();
-    const float footerHeight = padHelp ? ImGui::GetTextLineHeight() + style.ItemSpacing.y * 2 : 0.0f;
+    const float footerHeight = ImGui::GetFontSize() + 16.0f + style.ItemSpacing.y * 2;
     float sectionHeight = menuSize.y - headerHeight - 4 - style.ItemSpacing.y * 2 - footerHeight;
     float columnHeight = sectionHeight - style.ItemSpacing.y * 4;
     ImGui::SetNextWindowPos(pos + style.ItemSpacing * 2);
@@ -850,12 +998,49 @@ void Menu::DrawElement() {
     if (!useColumns || menuSearchText.length() > 0) {
         ImGui::EndChild();
     }
-    if (padHelp) {
-        const ImVec2 footerPos = { ImGui::GetWindowPos().x + style.ItemSpacing.x * 2,
-                                   topY + sectionHeight + style.ItemSpacing.y };
-        ImGui::GetWindowDrawList()->AddText(footerPos, ImGui::GetColorU32({ 1.0f, 1.0f, 1.0f, 0.75f }),
-                                            "D-Pad: move   A: select   B: back / close   L / R: section   "
-                                            "ZL / ZR: tab   Left / Right: adjust slider");
+    {
+        const float footerY = topY + sectionHeight + style.ItemSpacing.y;
+        const float buttonHeight = ImGui::GetFontSize() + 16.0f;
+        if (padHelp) {
+            const ImVec2 helpPos = { ImGui::GetWindowPos().x + style.ItemSpacing.x * 2,
+                                     footerY + (buttonHeight - ImGui::GetFontSize()) / 2 };
+            ImGui::GetWindowDrawList()->AddText(helpPos, ImGui::GetColorU32({ 1.0f, 1.0f, 1.0f, 0.75f }),
+                                                "D-Pad: move  A: select  B: back/close  L/R: section  ZL/ZR: tab  "
+                                                "Left/Right: slider  Y: default");
+        }
+        // Not while search results are shown: they come from several pages.
+        auto& page = sidebar->at(sectionIndex);
+        if (!(headerSearch && menuSearchText.length() > 0)) {
+            const char* resetLabel = ICON_FA_UNDO " Reset page";
+            const float buttonWidth = ImGui::CalcTextSize(resetLabel).x + 20.0f;
+            ImGui::SetCursorScreenPos({ ImGui::GetWindowPos().x + menuSize.x - buttonWidth - style.ItemSpacing.x * 2,
+                                        footerY });
+            UIWidgets::ButtonOptions resetOptions = {};
+            resetOptions.size = UIWidgets::Sizes::Inline;
+            resetOptions.color = menuThemeIndex;
+            resetOptions.disabled = !PageHasChanges(page);
+            resetOptions.tooltip = "Reset every setting on this page to its default.";
+            if (UIWidgets::Button(resetLabel, resetOptions)) {
+                ImGui::OpenPopup("Reset page");
+            }
+            if (ImGui::BeginPopup("Reset page")) {
+                ImGui::Text("Reset every setting on \"%s\" to its default?", sectionIndex.c_str());
+                UIWidgets::ButtonOptions popupOptions = {};
+                popupOptions.size = UIWidgets::Sizes::Inline;
+                popupOptions.color = UIWidgets::Colors::Red;
+                if (UIWidgets::Button("Reset", popupOptions)) {
+                    ResetPage(page);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                popupOptions.color = UIWidgets::Colors::Gray;
+                if (UIWidgets::Button("Cancel", popupOptions)) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SetItemDefaultFocus();
+                ImGui::EndPopup();
+            }
+        }
     }
     ImGui::PopFont();
     ImGui::PopFont();

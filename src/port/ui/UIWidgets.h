@@ -114,6 +114,8 @@ namespace UIWidgets {
         bool disabled = false;
         const char* disabledTooltip = "";
         Colors color = Colors::NoColor;
+        // A default was given (DefaultValue / DefaultIndex), so a widget without a CVar can offer a reset button too.
+        bool hasDefault = false;
 
         WidgetOptions& Color(Colors color_) {
             color = color = color_;
@@ -155,6 +157,7 @@ namespace UIWidgets {
 
         CheckboxOptions& DefaultValue(bool defaultValue_) {
             defaultValue = defaultValue_;
+            hasDefault = true;
             return *this;
         }
         CheckboxOptions& ComponentAlignment(ComponentAlignment alignment_) {
@@ -189,6 +192,7 @@ namespace UIWidgets {
         }
         ComboboxOptions& DefaultIndex(uint32_t defaultIndex_) {
             defaultIndex = defaultIndex_;
+            hasDefault = true;
             return *this;
         }
         ComboboxOptions& ComponentAlignment(ComponentAlignment alignment_) {
@@ -243,6 +247,7 @@ namespace UIWidgets {
         }
         IntSliderOptions& DefaultValue(int32_t defaultValue_) {
             defaultValue = defaultValue_;
+            hasDefault = true;
             return *this;
         }
         IntSliderOptions& ComponentAlignment(ComponentAlignment alignment_) {
@@ -298,6 +303,7 @@ namespace UIWidgets {
         }
         FloatSliderOptions& DefaultValue(float defaultValue_) {
             defaultValue = defaultValue_;
+            hasDefault = true;
             return *this;
         }
         FloatSliderOptions& ComponentAlignment(ComponentAlignment alignment_) {
@@ -324,6 +330,14 @@ namespace UIWidgets {
             return *this;
         }
     };
+
+    // Reset button: a small undo icon at the right edge of a setting's row, enabled while the value differs from
+    // the default; Y on the controller does the same for the highlighted setting. Draw the setting between
+    // BeginResettable() (keeps room for the button) and EndResettable(), which returns true when it was used.
+    // The CVar widgets below do this themselves.
+    void BeginResettable();
+    bool EndResettable(const char* label, bool differs, bool disabled);
+    bool FloatDiffers(float value, float defaultValue);
 
     void PushStyleMenu(const ImVec4& color);
     void PushStyleMenu(Colors color = Colors::LightBlue);
@@ -668,10 +682,17 @@ namespace UIWidgets {
     bool CVarCombobox(const char* label, const char* cvarName, const std::unordered_map<T, const char*>& comboMap, const ComboboxOptions& options = {}) {
         bool dirty = false;
         int32_t value = CVarGetInteger(cvarName, options.defaultIndex);
+        BeginResettable();
         if (Combobox<T>(label, &value, comboMap, options)) {
+            dirty = true;
+        }
+        if (EndResettable(label, value != static_cast<int32_t>(options.defaultIndex), options.disabled)) {
+            value = options.defaultIndex;
+            dirty = true;
+        }
+        if (dirty) {
             CVarSetInteger(cvarName, value);
             Ship::Context::GetRawInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
-            dirty = true;
         }
         return dirty;
     }
@@ -680,10 +701,17 @@ namespace UIWidgets {
     bool CVarCombobox(const char* label, const char* cvarName, const std::vector<const char*>& comboVector, const ComboboxOptions& options = {}) {
         bool dirty = false;
         int32_t value = CVarGetInteger(cvarName, options.defaultIndex);
+        BeginResettable();
         if (Combobox<T>(label, &value, comboVector, options)) {
+            dirty = true;
+        }
+        if (EndResettable(label, value != static_cast<int32_t>(options.defaultIndex), options.disabled)) {
+            value = options.defaultIndex;
+            dirty = true;
+        }
+        if (dirty) {
             CVarSetInteger(cvarName, value);
             Ship::Context::GetRawInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
-            dirty = true;
         }
         return dirty;
     }
@@ -692,10 +720,17 @@ namespace UIWidgets {
     bool CVarCombobox(const char* label, const char* cvarName, const char* (&comboArray)[N], const ComboboxOptions& options = {}) {
         bool dirty = false;
         int32_t value = CVarGetInteger(cvarName, options.defaultIndex);
+        BeginResettable();
         if (Combobox<T>(label, &value, comboArray, options)) {
+            dirty = true;
+        }
+        if (EndResettable(label, value != static_cast<int32_t>(options.defaultIndex), options.disabled)) {
+            value = options.defaultIndex;
+            dirty = true;
+        }
+        if (dirty) {
             CVarSetInteger(cvarName, value);
             Ship::Context::GetRawInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
-            dirty = true;
         }
         return dirty;
     }

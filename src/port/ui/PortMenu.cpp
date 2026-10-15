@@ -317,7 +317,7 @@ void PortMenu::AddSettings() {
     AddWidget(path, "Enable Vsync", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_VSYNC_ENABLED)
         .PreFunc([](WidgetInfo& info) { info.isHidden = mPortMenu->disabledMap.at(DISABLE_FOR_NO_VSYNC).active; })
-        .Options(CheckboxOptions().Tooltip("Enables Vsync."));
+        .Options(CheckboxOptions().Tooltip("Enables Vsync.").DefaultValue(true));
     AddWidget(path, "Windowed Fullscreen", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_SDL_WINDOWED_FULLSCREEN)
         .PreFunc([](WidgetInfo& info) {
@@ -333,7 +333,10 @@ void PortMenu::AddSettings() {
                      .DefaultValue(true));
     AddWidget(path, "Texture Filter (Needs reload)", WIDGET_CVAR_COMBOBOX)
         .CVar(CVAR_TEXTURE_FILTER)
-        .Options(ComboboxOptions().Tooltip("Sets the applied Texture Filtering.").ComboMap(textureFilteringMap));
+        .Options(ComboboxOptions()
+                     .Tooltip("Sets the applied Texture Filtering.")
+                     .ComboMap(textureFilteringMap)
+                     .DefaultIndex(Fast::FilteringMode::FILTER_THREE_POINT));
 
     path.sidebarName = "Controls";
     AddSidebarEntry("Settings", "Controls", 1);
@@ -371,8 +374,9 @@ void PortMenu::AddEnhancements() {
         .Options(CheckboxOptions().Tooltip("Alters result portrait spacing for better aesthetics on widescreen"));
     AddWidget(path, "No Level of Detail (LOD)", WIDGET_CVAR_CHECKBOX)
         .CVar("gDisableLod")
-        .Options(CheckboxOptions().Tooltip(
-            "Disable Level of Detail (LOD) to avoid models using lower poly versions at a distance"));
+        .Options(CheckboxOptions()
+                     .Tooltip("Disable Level of Detail (LOD) to avoid models using lower poly versions at a distance")
+                     .DefaultValue(true));
     AddWidget(path, "Disable Culling", WIDGET_CVAR_CHECKBOX)
         .CVar("gNoCulling")
         .Options(CheckboxOptions().Tooltip("Disable original culling of mk64"));
@@ -474,13 +478,13 @@ void PortMenu::AddRulesets() {
         .Options(CheckboxOptions().Tooltip("Fixes a logic bug in the game code. No evidence if this is intended gameplay or not."));
     AddWidget(path, "Track X Stretch", WIDGET_SLIDER_FLOAT)
         .ValuePointer(&gVtxStretch[0])
-        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.2f"));
+        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.2f").DefaultValue(1.0f));
     AddWidget(path, "Track Y Stretch", WIDGET_SLIDER_FLOAT)
         .ValuePointer(&gVtxStretch[1])
-        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.2f"));
+        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.2f").DefaultValue(1.0f));
     AddWidget(path, "Track Z Stretch", WIDGET_SLIDER_FLOAT)
         .ValuePointer(&gVtxStretch[2])
-        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.2f"));
+        .Options(UIWidgets::FloatSliderOptions().Min(0.1f).Max(10.0f).Step(0.1f).Format("%.2f").DefaultValue(1.0f));
 
 
     AddWidget(path, "Trains", WIDGET_CVAR_SLIDER_INT)

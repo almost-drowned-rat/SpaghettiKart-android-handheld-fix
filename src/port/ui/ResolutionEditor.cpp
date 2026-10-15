@@ -160,7 +160,7 @@ void RegisterResolutionWidgets() {
             CVarSetInteger(CVAR_PREFIX_ADVANCED_RESOLUTION ".UIComboItem.AspectRatio", item_aspectRatio);
             CVarSave();
         })
-        .Options(ComboboxOptions().ComboMap(aspectRatioPresetLabels));
+        .Options(ComboboxOptions().ComboMap(aspectRatioPresetLabels).DefaultIndex(3)); // as UpdateResolutionVars
     mPortMenu->AddWidget(path, "AspectRationCustom", WIDGET_CUSTOM).CustomFunction([](WidgetInfo& info) {
         // Hide aspect ratio input fields if using one of the presets.
         if (item_aspectRatio == default_aspectRatio && !showHorizontalResField) {
