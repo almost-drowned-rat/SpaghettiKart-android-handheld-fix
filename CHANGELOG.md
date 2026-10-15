@@ -25,6 +25,8 @@ controller. Tested on the AYN Odin 2 Portal (1920×1080, Android 13).
   show - / + buttons and their value.
 
 ### Fixed
+- The game started with the menu open when it had been open on quitting (its visibility is saved with the
+  settings); it now always starts with the menu closed.
 - B closed the whole menu when it was only meant to close an open drop-down list.
 - Default values that did not match what the game uses: Vsync (on), No LOD (on), texture filter (three-point).
 

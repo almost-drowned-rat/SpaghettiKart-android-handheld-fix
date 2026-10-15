@@ -46,6 +46,11 @@ void SetupGuiElements() {
     // mGameMenuBar = std::make_shared<GameMenuBar>("gOpenMenuBar", CVarGetInteger("gOpenMenuBar", 0));
     // gui->SetMenuBar(mGameMenuBar);
 
+#ifdef __ANDROID__
+    // Handheld fork: the menu's visibility is saved with the settings, so quitting with it open started the next
+    // session in the menu. The game always starts with it closed; Back opens it.
+    CVarSetInteger("gOpenMenu", 0);
+#endif
     mPortMenu = std::make_shared<PortMenu>("gOpenMenu", "Port Menu");
     gui->SetMenu(mPortMenu);
 
