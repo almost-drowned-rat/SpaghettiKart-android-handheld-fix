@@ -3,6 +3,9 @@
 
 #include "Game.h"
 #include "port/Engine.h"
+#ifdef __ANDROID__
+#include "port/android/MenuPause.h"
+#endif
 
 #include <fast/Fast3dWindow.h>
 #include <memory>
@@ -55,6 +58,11 @@ extern "C" {
 
 extern "C" void Graphics_PushFrame(Gfx* pool) {
     GameEngine::ProcessGfxCommands(pool);
+}
+
+// Handheld fork: draw the last frame again, without interpolated in-between frames (they would wobble).
+extern "C" void Graphics_PushStillFrame(Gfx* pool) {
+    GameEngine::ProcessGfxCommands(pool, true);
 }
 
 // Create the world instance
@@ -980,6 +988,13 @@ static void ApplyPendingReset() {
 
 void push_frame() {
     ApplyPendingReset();
+#ifdef __ANDROID__
+    // Handheld fork: while the menu is open the game, its timers and the sound stand still.
+    if (AndroidMenuPause_Update()) {
+        thread5_still_frame();
+        return;
+    }
+#endif
     GameEngine::StartAudioFrame();
     GameEngine::Instance->StartFrame();
     thread5_iteration();

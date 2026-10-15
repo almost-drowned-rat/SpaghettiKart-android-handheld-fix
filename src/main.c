@@ -12,6 +12,7 @@
 #include "main.h"
 #ifdef __ANDROID__
 #include "port/android/MenuCombo.h"
+#include "port/android/MenuPause.h"
 #endif
 #include "racing/memory.h"
 #include "menus.h"
@@ -399,6 +400,11 @@ void read_controllers(void) {
 #ifdef __ANDROID__
     // Handheld fork: Start + Select opens the menu, so Start must not pause the race meanwhile.
     AndroidMenuCombo_FilterButtons(&gControllerPads[0].button);
+    // Buttons still held from closing the menu (B, Start + Select) must not reach the game.
+    for (s32 i = 0; i < 4; i++) {
+        AndroidMenuPause_FilterPad(i, &gControllerPads[i].button, &gControllerPads[i].stick_x,
+                                   &gControllerPads[i].stick_y);
+    }
 #endif
     update_controller(0);
     update_controller(1);
@@ -1184,6 +1190,18 @@ void thread5_iteration(void) {
     end_master_display_list();
     display_and_vsync();
 }
+
+#ifdef __ANDROID__
+/**
+ * Handheld fork: a frame while the menu is open (see port/android/MenuPause.h). The game logic does not run; the
+ * last display list is drawn again, so the last picture stays behind the menu and the menu itself keeps updating.
+ */
+void thread5_still_frame(void) {
+    // Keep the delta timer current, so the first frame after closing does not count the whole pause.
+    calculate_delta_time();
+    Graphics_PushStillFrame(gGfxPool->gfxPool);
+}
+#endif
 
 /**
  * Sound processing thread. Runs at 50 or 60 FPS according to osTvType.

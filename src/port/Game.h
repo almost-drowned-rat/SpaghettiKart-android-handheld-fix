@@ -40,6 +40,7 @@ void CM_RequestReset(void); // Queue a game reset; applied at the top of the nex
 // NOLINTBEGIN(readability-identifier-naming)
 
 void Graphics_PushFrame(Gfx* pool);
+void Graphics_PushStillFrame(Gfx* pool);
 
 uintptr_t CM_GetTrack();
 Properties* CM_GetProps();

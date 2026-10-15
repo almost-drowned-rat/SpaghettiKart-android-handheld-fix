@@ -103,6 +103,9 @@ void func_80002658(void);
 void update_gamestate(void);
 void thread5_game_loop(void);
 void thread5_iteration(void);
+#ifdef __ANDROID__
+void thread5_still_frame(void);
+#endif
 void thread4_audio(void*);
 extern f32 gDeltaTime;
 

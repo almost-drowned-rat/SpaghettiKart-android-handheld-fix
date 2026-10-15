@@ -75,7 +75,7 @@ class GameEngine {
     static void RunCommands(Gfx* pool, const std::vector<std::unordered_map<Mtx*, MtxF>>& mtx_replacements);
     void ProcessFrame(void (*run_one_game_iter)()) const;
     static void Destroy();
-    static void ProcessGfxCommands(Gfx* pool);
+    static void ProcessGfxCommands(Gfx* pool, bool still = false);
     static uint8_t GetBankIdByName(const std::string& name);
     static int ShowYesNoBox(const char* title, const char* box);
     static void ShowMessage(const char* title, const char* message, SDL_MessageBoxFlags type = SDL_MESSAGEBOX_ERROR);

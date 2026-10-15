@@ -440,7 +440,7 @@ void GameEngine::RunCommands(Gfx* pool, const std::vector<std::unordered_map<Mtx
  * At the end of the game loop, these commands are sent into lus and interpreted
  * or translated into modern graphics commands
  */
-void GameEngine::ProcessGfxCommands(Gfx* pool) {
+void GameEngine::ProcessGfxCommands(Gfx* pool, bool still) {
     std::vector<std::unordered_map<Mtx*, MtxF>> mtx_replacements;
     int target_fps = GameEngine::Instance->GetInterpolationFPS();
     if (CVarGetInteger("gModifyInterpolationTargetFPS", 0)) {
@@ -466,7 +466,7 @@ void GameEngine::ProcessGfxCommands(Gfx* pool) {
     // Get matrix replacements for intermediate frames
     while (time + original_fps <= next_original_frame) {
         time += original_fps;
-        if (time != next_original_frame) {
+        if (time != next_original_frame && !still) {
             mtx_replacements.push_back(FrameInterpolation_Interpolate((float) time / next_original_frame));
         } else {
             mtx_replacements.emplace_back(); // No interpolation for key frames
