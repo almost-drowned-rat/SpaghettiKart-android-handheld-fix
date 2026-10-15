@@ -17,6 +17,13 @@ What this fork changes (details in [CHANGELOG.md](CHANGELOG.md)):
 The race renders in 16:9 by default (wider view, not stretched); title and menu screens keep their 4:3 borders.
 For 4:3 in the race too, set *Settings → Graphics → Force aspect ratio* to *Original (4:3)*.
 
+### AI assistance
+
+The changes in this fork were made with AI assistance ([Claude Code](https://claude.com/claude-code)). Planning,
+testing on the device and the decision what gets released are by the repository owner. Tested only on the
+**AYN Odin 2 Portal** — use at your own risk. This applies only to the fork's own changes, not to the code of the
+original projects.
+
 > ⚠️ **No game assets.** The APK on the [Releases](../../releases) page contains only this project's code, like the
 > original releases. On the first start the app asks for your own ROM of **Mario Kart 64 (USA)**,
 > SHA-1 `579c48e211ae952530ffc8738709f078d5dd215e`, and turns it into the game data on the device.
