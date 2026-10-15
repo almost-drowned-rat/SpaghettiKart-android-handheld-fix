@@ -70,6 +70,8 @@ class Menu : public GuiWindow {
 
   private:
     bool allowPopout = true; // PortNote: should be set to false on small screen ports
+    bool wasVisible = false;
+    bool navInitPending = false; // put the controller selection on the first entry in the next draw
     bool popped;
     ImVec2 poppedSize;
     ImVec2 poppedPos;

@@ -139,12 +139,14 @@ void PortMenu::AddSettings() {
         .Options(CheckboxOptions().Tooltip(
             "Enables the Controller Pak screen when starting the game."));
 #if not defined(__SWITCH__) and not defined(__WIIU__)
+#ifndef __ANDROID__ // always on while the menu is open on Android
     AddWidget(path, "Menu Controller Navigation", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_IMGUI_CONTROLLER_NAV)
         .Options(CheckboxOptions().Tooltip(
             "Allows controller navigation of the Spaghetti menu (Settings, Enhancements,...)\nCAUTION: "
             "This will disable game inputs while the menu is visible.\n\nD-pad to move between "
             "items, A to select, B to move up in scope."));
+#endif
     AddWidget(path, "Cursor Always Visible", WIDGET_CVAR_CHECKBOX)
         .CVar("gSettings.CursorVisibility")
         .Callback([](WidgetInfo& info) {

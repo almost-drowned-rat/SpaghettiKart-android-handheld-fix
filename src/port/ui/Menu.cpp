@@ -1,5 +1,6 @@
 #include "Menu.h"
 #include "UIWidgets.h"
+#include "MenuPad.h"
 #include "port/Engine.h"
 #include "ship/window/gui/GuiMenuBar.h"
 #include "ship/window/gui/GuiElement.h"
@@ -22,6 +23,10 @@ extern void Warp();
 namespace BenGui {}
 
 namespace Ship {
+// The menu is a nest of child windows; flattened, the D-pad moves across all of them like one page instead of
+// needing A to enter each child and B to leave it.
+constexpr ImGuiChildFlags kMenuChildNav = ImGuiChildFlags_NavFlattened;
+
 std::string disabledTempTooltip;
 const char* disabledTooltip;
 bool disabledValue = false;
@@ -172,7 +177,7 @@ bool ModernMenuHeaderEntry(std::string label) {
 
 uint32_t Menu::DrawSearchResults(std::string& menuSearchText) {
     auto menuThemeIndex = static_cast<UIWidgets::Colors>(CVarGetInteger("gSettings.Menu.Theme", defaultThemeIndex));
-    ImGui::BeginChild("Search Results");
+    ImGui::BeginChild("Search Results", ImVec2(0, 0), ImGuiChildFlags_NavFlattened);
     int searchCount = 0;
     for (auto& menuLabel : menuOrder) {
         auto& menuEntry = menuEntries.at(menuLabel);
@@ -465,7 +470,12 @@ void Menu::MenuDrawItem(WidgetInfo& widget, uint32_t width, UIWidgets::Colors me
 
 void Menu::Draw() {
     if (!IsVisible()) {
+        wasVisible = false;
         return;
+    }
+    if (!wasVisible) {
+        wasVisible = true;
+        navInitPending = true;
     }
     DrawElement();
     // Sync up the IsVisible flag if it was changed by ImGui
@@ -535,11 +545,26 @@ void Menu::DrawElement() {
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 8.0f));
     const char* headerCvar = "gSettings.Menu.ActiveHeader";
     std::string headerIndex = CVarGetString(headerCvar, "Settings");
+    bool headerSearch = !CVarGetInteger("gSettings.Menu.SidebarSearch", 0);
+
+    // Controller: ZL / ZR switch the header tab, L / R the sidebar section (further down).
+    MenuPad::ClaimMenuButtons();
+    const int headerStep = MenuPad::Pressed(ImGuiKey_GamepadR2) - MenuPad::Pressed(ImGuiKey_GamepadL2);
+    if (headerStep != 0 && !menuOrder.empty()) {
+        const int count = static_cast<int>(menuOrder.size());
+        const int current = std::min<int>(GetVectorIndexOf(menuOrder, headerIndex), count - 1);
+        headerIndex = menuOrder.at((current + headerStep + count) % count);
+        CVarSetString(headerCvar, headerIndex.c_str());
+        CVarSave();
+        if (headerSearch) {
+            menuSearch.Clear();
+        }
+        navInitPending = true;
+    }
     ImVec2 pos = window->DC.CursorPos;
     float centerX = pos.x + windowWidth / 2 - (style.ItemSpacing.x * (menuEntries.size() + 1));
     std::vector<ImVec2> headerSizes;
     float headerWidth = style.ItemSpacing.x;
-    bool headerSearch = !CVarGetInteger("gSettings.Menu.SidebarSearch", 0);
     if (headerSearch) {
         headerWidth += 200.0f + style.ItemSpacing.x + style.FramePadding.x;
     }
@@ -569,7 +594,8 @@ void Menu::DrawElement() {
     pos += window->WorkRect.GetSize() / 2 - menuSize / 2;
     ImGui::SetNextWindowPos(pos);
     ImGui::BeginChild("Menu Block", menuSize,
-                      ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize,
+                      ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize |
+                          kMenuChildNav,
                       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
 
     std::unordered_map<std::string, SidebarEntry>* sidebar;
@@ -586,6 +612,7 @@ void Menu::DrawElement() {
     if (UIWidgets::Button(ICON_FA_TIMES_CIRCLE, options)) {
         ToggleVisibility();
 
+#ifndef __ANDROID__ // On Android SpaghettiGui keeps gamepad navigation in line with the menu every frame.
         // Update gamepad navigation after close based on if other menus are still visible
         auto mImGuiIo = &ImGui::GetIO();
         if (CVarGetInteger(CVAR_IMGUI_CONTROLLER_NAV, 0) &&
@@ -594,6 +621,7 @@ void Menu::DrawElement() {
         } else {
             mImGuiIo->ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
         }
+#endif
     }
     ImGui::SameLine();
     ImGui::SetNextWindowSizeConstraints({ 0, headerHeight }, { headerWidth, headerHeight });
@@ -603,7 +631,8 @@ void Menu::DrawElement() {
     }
     bool autoFocus = CVarGetInteger("gSettings.Menu.SearchAutofocus", 0);
     ImGui::BeginChild("Header Selection", headerSelSize,
-                      ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize,
+                      ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize |
+                          kMenuChildNav,
                       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_HorizontalScrollbar);
     uint8_t curIndex = 0;
     for (auto& label : menuOrder) {
@@ -682,7 +711,10 @@ void Menu::DrawElement() {
     window->DrawList->AddRectFilled(pos, pos + ImVec2{ menuSize.x, 4 }, ImGui::GetColorU32({ 255, 255, 255, 255 }),
                                     true, style.WindowRounding);
     pos.y += style.ItemSpacing.y;
-    float sectionHeight = menuSize.y - headerHeight - 4 - style.ItemSpacing.y * 2;
+    // A line at the bottom with the controller buttons.
+    const bool padHelp = MenuPad::Active();
+    const float footerHeight = padHelp ? ImGui::GetTextLineHeight() + style.ItemSpacing.y * 2 : 0.0f;
+    float sectionHeight = menuSize.y - headerHeight - 4 - style.ItemSpacing.y * 2 - footerHeight;
     float columnHeight = sectionHeight - style.ItemSpacing.y * 4;
     ImGui::SetNextWindowPos(pos + style.ItemSpacing * 2);
     float sidebarWidth = 200 * uiScale - style.ItemSpacing.x;
@@ -693,11 +725,25 @@ void Menu::DrawElement() {
     if (!sidebar->contains(sectionIndex)) {
         sectionIndex = sidebar->begin()->first;
     }
+    const int sectionStep = MenuPad::Pressed(ImGuiKey_GamepadR1) - MenuPad::Pressed(ImGuiKey_GamepadL1);
+    auto& sidebarOrder = menuEntries.at(headerIndex).sidebarOrder;
+    if (sectionStep != 0 && !sidebarOrder.empty()) {
+        const int count = static_cast<int>(sidebarOrder.size());
+        const int current = std::min<int>(GetVectorIndexOf(sidebarOrder, sectionIndex), count - 1);
+        sectionIndex = sidebarOrder.at((current + sectionStep + count) % count);
+        CVarSetString(sidebarCvar, sectionIndex.c_str());
+        CVarSave();
+        if (headerSearch) {
+            menuSearch.Clear();
+        }
+        navInitPending = true;
+    }
     float sectionCenterX = pos.x + (sidebarWidth / 2);
     float topY = pos.y;
     ImGui::SetNextWindowSizeConstraints({ sidebarWidth, 0 }, { sidebarWidth, columnHeight });
     ImGui::BeginChild((menuEntries.at(headerIndex).label + " Section").c_str(), { sidebarWidth, columnHeight * 3 },
-                      ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize, ImGuiWindowFlags_NoTitleBar);
+                      ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize | kMenuChildNav,
+                      ImGuiWindowFlags_NoTitleBar);
     for (auto& sidebarLabel : menuEntries.at(headerIndex).sidebarOrder) {
         std::string nextIndex = "";
         UIWidgets::PushStyleButton(menuThemeIndex);
@@ -740,7 +786,8 @@ void Menu::DrawElement() {
     if (!useColumns || (headerSearch && menuSearchText.length() > 0)) {
         ImGui::SameLine();
         ImGui::SetNextWindowSizeConstraints({ sectionWidth, 0 }, { sectionWidth, columnHeight });
-        ImGui::BeginChild(sectionMenuId.c_str(), { sectionWidth, windowHeight * 4 }, ImGuiChildFlags_AutoResizeY,
+        ImGui::BeginChild(sectionMenuId.c_str(), { sectionWidth, windowHeight * 4 },
+                          ImGuiChildFlags_AutoResizeY | kMenuChildNav,
                           ImGuiWindowFlags_NoTitleBar);
     }
     if (headerSearch && menuSearchText.length() > 0) {
@@ -772,8 +819,18 @@ void Menu::DrawElement() {
             std::string sectionId = fmt::format("{} Column {}", sectionMenuId, i);
             if (useColumns) {
                 ImGui::SetNextWindowSizeConstraints({ columnWidth, 0 }, { columnWidth, columnHeight });
-                ImGui::BeginChild(sectionId.c_str(), { columnWidth, windowHeight * 4 }, ImGuiChildFlags_AutoResizeY,
+                ImGui::BeginChild(sectionId.c_str(), { columnWidth, windowHeight * 4 },
+                                  ImGuiChildFlags_AutoResizeY | kMenuChildNav,
                                   ImGuiWindowFlags_NoTitleBar);
+            }
+            // On opening and after L / R / ZL / ZR the controller selection starts at the first entry.
+            if (i == 0 && navInitPending) {
+                navInitPending = false;
+                if (MenuPad::Active()) {
+                    ImGui::FocusWindow(ImGui::GetCurrentWindow());
+                    ImGui::NavInitWindow(ImGui::GetCurrentWindow(), true);
+                    ImGui::SetNavCursorVisible(true);
+                }
             }
             // for (auto& entryName : sidebar->at(sectionIndex).sidebarOrder) {
             style.ItemSpacing.y = 12;
@@ -793,6 +850,13 @@ void Menu::DrawElement() {
     if (!useColumns || menuSearchText.length() > 0) {
         ImGui::EndChild();
     }
+    if (padHelp) {
+        const ImVec2 footerPos = { ImGui::GetWindowPos().x + style.ItemSpacing.x * 2,
+                                   topY + sectionHeight + style.ItemSpacing.y };
+        ImGui::GetWindowDrawList()->AddText(footerPos, ImGui::GetColorU32({ 1.0f, 1.0f, 1.0f, 0.75f }),
+                                            "D-Pad: move   A: select   B: back / close   L / R: section   "
+                                            "ZL / ZR: tab   Left / Right: adjust slider");
+    }
     ImGui::PopFont();
     ImGui::PopFont();
 
@@ -804,6 +868,7 @@ void Menu::DrawElement() {
         poppedSize = ImGui::GetWindowSize();
         poppedPos = ImGui::GetWindowPos();
     }
+    MenuPad::DrawNavCursor();
     ImGui::End();
 }
 } // namespace Ship

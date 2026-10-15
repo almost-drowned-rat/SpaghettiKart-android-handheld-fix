@@ -1,6 +1,8 @@
 #include "UIWidgets.h"
+#include "MenuPad.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
+#include <algorithm>
 #include <sstream>
 #include <libultraship/libultraship.h>
 #include <string>
@@ -361,12 +363,15 @@ bool SliderInt(const char* label, int32_t* value, const IntSliderOptions& option
         }
     }
     if (options.showButtons) {
+        // Touch only: the controller adjusts the slider itself with Left / Right (see MenuPad).
+        ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
         if (Button("-", ButtonOptions{ .color = options.color }.Size(Sizes::Inline)) && *value > options.min) {
             *value -= options.step;
             if (*value < options.min)
                 *value = options.min;
             dirty = true;
         }
+        ImGui::PopItemFlag();
         ImGui::SameLine(0, 3.0f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - (ImGui::CalcTextSize("+").x + 20.0f + 3.0f));
     } else {
@@ -376,15 +381,21 @@ bool SliderInt(const char* label, int32_t* value, const IntSliderOptions& option
                             options.flags)) {
         dirty = true;
     }
+    if (const int steps = MenuPad::SliderSteps(ImGui::GetItemID())) {
+        *value = std::clamp(*value + steps * options.step, options.min, options.max);
+        dirty = true;
+    }
     if (options.showButtons) {
         ImGui::SameLine(0, 3.0f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
         if (Button("+", ButtonOptions{ .color = options.color }.Size(Sizes::Inline)) && *value < options.max) {
             *value += options.step;
             if (*value > options.max)
                 *value = options.max;
             dirty = true;
         }
+        ImGui::PopItemFlag();
     }
     PopStyleSlider();
     ImGui::EndDisabled();
@@ -471,11 +482,14 @@ bool SliderFloat(const char* label, float* value, const FloatSliderOptions& opti
         }
     }
     if (options.showButtons) {
+        // Touch only: the controller adjusts the slider itself with Left / Right (see MenuPad).
+        ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
         if (Button("-", ButtonOptions{ .color = options.color }.Size(Sizes::Inline)) && *value > options.min) {
             *value -= options.step;
             ClampFloat(value, options.min, options.max, options.step);
             dirty = true;
         }
+        ImGui::PopItemFlag();
         ImGui::SameLine(0, 3.0f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - (ImGui::CalcTextSize("+").x + 20.0f + 3.0f));
     } else {
@@ -487,14 +501,21 @@ bool SliderFloat(const char* label, float* value, const FloatSliderOptions& opti
         ClampFloat(value, options.min, options.max, options.step);
         dirty = true;
     }
+    if (const int steps = MenuPad::SliderSteps(ImGui::GetItemID())) {
+        *value += steps * options.step;
+        ClampFloat(value, options.min, options.max, options.step);
+        dirty = true;
+    }
     if (options.showButtons) {
         ImGui::SameLine(0, 3.0f);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
         if (Button("+", ButtonOptions{ .color = options.color }.Size(Sizes::Inline)) && *value < options.max) {
             *value += options.step;
             ClampFloat(value, options.min, options.max, options.step);
             dirty = true;
         }
+        ImGui::PopItemFlag();
     }
     PopStyleSlider();
     ImGui::EndDisabled();

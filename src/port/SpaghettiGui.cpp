@@ -111,8 +111,12 @@ void SpaghettiGui::DrawMenu() {
     // the pad navigates it, also without the controller navigation setting.
     const bool comboToggle =
         AndroidMenuCombo_Update(ImGui::IsKeyDown(ImGuiKey_GamepadStart), ImGui::IsKeyDown(TOGGLE_PAD_BTN));
+    // ImGui has already handled this frame's B (closing a popup, leaving a slider) before this runs, so whether
+    // B was taken is judged by the state at the end of the previous frame.
+    static bool menuWasBusy = false;
     const bool closeWithB = GetMenu() && GetMenu()->IsVisible() &&
-                            ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) && !ImGui::IsAnyItemActive() &&
+                            ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) && !menuWasBusy &&
+                            !ImGui::IsAnyItemActive() &&
                             !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
     const bool padToggle = comboToggle || closeWithB;
     if (padToggle) {
@@ -166,6 +170,17 @@ void SpaghettiGui::DrawMenu() {
         GetMenu()->Update();
         GetMenu()->Draw();
     }
+
+#ifdef __ANDROID__
+    // The pad navigates the menu whenever it is up, however it was opened (also by touch).
+    if (GetMenuOrMenubarVisible()) {
+        mImGuiIo->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    } else {
+        mImGuiIo->ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
+    }
+    menuWasBusy = ImGui::IsAnyItemActive() ||
+                  ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+#endif
 
     for (auto& windowIter : mGuiWindows) {
         windowIter.second->Update();
