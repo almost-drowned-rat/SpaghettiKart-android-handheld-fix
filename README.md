@@ -9,8 +9,11 @@ What this fork changes (details in [CHANGELOG.md](CHANGELOG.md)):
 - Own app ID `com.izzy.kart.handheld` ("SpaghettiKart Handheld") — installs next to the original app
 - No on-screen controller — play with the built-in controller; touch still works as a mouse in the menus. Only
   the **Mods** button (to the mods and saves managers) is shown while the menu is open
-- Options menu: hold **Start + Select** for about one second to open or close it (once per press); **B** closes
-  it too. Start alone pauses the race as usual and does not reach the game while Select is held with it
+- Options menu on Android's **Back**: swipe from the edge to bring up the system bar and tap back (or use the back
+  gesture); **B** closes it too. The game stands still while the menu is open
+- Menu fully usable with the controller: D-pad / stick move, **A** select, **B** back / close, **L / R** section,
+  **ZL / ZR** tab, **Left / Right** change a slider by one step, **Y** reset the selected setting to its default.
+  Every setting has a reset button (orange when changed), and **Reset page** resets a whole page
 - Real full screen, no black strip from the navigation bar; the game renders at the full 1920×1080
 - Fixed: the APK was missing the files the launcher needs to turn the ROM into game data
 

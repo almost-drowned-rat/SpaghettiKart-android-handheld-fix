@@ -43,8 +43,8 @@ android {
         applicationId = "com.izzy.kart.handheld"
         minSdk = 24
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.1"
+        versionCode = 9
+        versionName = "0.2"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")

@@ -3,6 +3,31 @@
 Fork of [izzy2lost/SpaghettiKart](https://github.com/izzy2lost/SpaghettiKart) for Android handhelds with a built-in
 controller. Tested on the AYN Odin 2 Portal (1920×1080, Android 13).
 
+## 0.2 — unreleased
+
+### Changed
+- Options menu on Android's **Back** instead of holding Start + Select: swipe from the edge to bring up the system
+  bar and tap its back button (or use the back gesture) to open or close the menu; **B** closes it too. Nothing
+  else in the game uses Back. Start reaches the game immediately again (no more 200 ms delay).
+- The game stands still while the menu is open, however it was opened: race, timers, opponents and music stop, the
+  last picture stays behind the menu, and closing it resumes exactly there. Buttons still held when the menu closes
+  (e.g. B) do not reach the game until released, so closing it does not brake or pick an entry.
+- Menu fully usable with the controller, always on while the menu is open (the "Menu Controller Navigation" setting
+  is hidden on Android): D-pad / left stick move, **A** selects, **B** goes back or closes, **L / R** switch the
+  sidebar section, **ZL / ZR** the header tab, **Left / Right** on a slider change it by one step (held: repeating
+  faster, still one step at a time), **Y** resets the selected setting. The D-pad moves across header, sidebar and
+  columns like one page. A thick yellow frame marks the selected entry, which starts on the first entry; a footer
+  line lists the buttons. Tooltips of the selected entry appear after a short delay. Touch keeps working alongside.
+- Reset-to-default button next to every setting, orange while the value differs from the default (grey
+  otherwise); resetting applies at once (e.g. the internal resolution). **Reset page** in the footer resets the
+  whole sidebar page after a confirmation.
+- Sliders snap to whole steps (internal resolution and volumes to whole percent, also values saved by 0.1) and
+  show - / + buttons and their value.
+
+### Fixed
+- B closed the whole menu when it was only meant to close an open drop-down list.
+- Default values that did not match what the game uses: Vsync (on), No LOD (on), texture filter (three-point).
+
 ## 0.1 — 2026-10-14
 
 Based on izzy2lost/SpaghettiKart `9253aad` (2026-08-02, app version 2.0.0).
